@@ -80,12 +80,12 @@ app.post("/user/login", async (req, res) => {
 })
 
 app.post("/user/verify", async (req, res) => {
-    const {token} = req.body
-    const {data, error} = await supabase.auth.getUser(token)
-    if(error) return res.json({status: "error", message: "Invalid token"})
-    const user = await supabase.from("Accounts").update({verified: true}).eq("email", data.user.email)
-    if(user.error) return res.json({status: "error", message: "Failed to verify user"})
-    return res.json({status: "success", message: "User verified successfully"})
+    const {token, email, password} = req.body
+    const {data: user, error: verifyError} = await supabase.auth.signInWithPassword({email, password})
+    if(verifyError || !verifyData.session || verifyData.session.access_token !== token) return res.json({status: "error", message: "Invalid token"})
+    return res.json({status: "success", user: {uuid: user.data[0].uuid, email: user.data[0].email, username: user.data[0].username}, token: tokenData.session.access_token})
+
+    
 })
 
 export default app;
