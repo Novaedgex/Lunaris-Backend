@@ -70,32 +70,15 @@ app.post("/user/create", async (req, res) => {
     return res.json({ status: "success", message: "Account created successfully" });
 });
 
-app.post("/user/login", async (req, res) => {
-    const { email, password } = req.body;
-
-    // FIX: Must use 'await' and destructure { data }
-    const { data: userData, error: userError } = await supabase.from("Accounts").select("*").eq("email", email);
-    
-    if (userError || !userData || userData.length === 0) {
-        return res.json({ status: "error", message: "Invalid email or password" });
-    }
-
-    const user = userData[0];
-
-    // FIX: bcrypt.compareSync requires a string password
-    const validPass = bcrypt.compareSync(password, user.password);
-    if (!validPass) return res.json({ status: "error", message: "Invalid email or password" });
-
-    // FIX: Must use 'await' for sign in
-    const { data: tokenData, error: tokenError } = await supabase.auth.signInWithPassword({ email, password });
-    
-    if (tokenError) return res.json({ status: "error", message: "An error occurred while logging in" });
-
-    return res.json({ 
-        status: "success", 
-        user: { uuid: user.UUID, email: user.email, username: user.username }, 
-        token: tokenData.session.access_token 
-    });
-});
+app.post("/user/login", (req, res) => {
+    const {email, password} = req.body
+    const user = supabase.from("Accounts").select("*").eq("email", email)
+    if(user.data.length === 0) return res.json({status: "error", message: "Invalid email or password"})
+    const validPass = bcrypt.compareSync(password, user.data[0].password)
+    if(!validPass) return res.json({status: "error", message: "Invalid email or password"})
+    const {data: tokenData, error: tokenError} = supabase.auth.signInWithPassword({email, password})
+    if(tokenError) return res.json({status: "error", message: "An error occurred while logging in"})
+    return res.json({status: "success", user: {uuid: user.data[0].uuid, email: user.data[0].email, username: user.data[0].username}, token: tokenData.session.access_token})
+})
 
 export default app;
