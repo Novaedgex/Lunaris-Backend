@@ -12,9 +12,11 @@
   "license": "ISC",
   "type": "module",
   "dependencies": {
+    "@supabase/supabase-js": "^2.104.0",
     "bcrypt": "^6.0.0",
     "better-sqlite3": "^12.9.0",
     "cors": "^2.8.6",
+    "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "nodemon": "^3.1.14",
     "sqlite": "^5.1.1",

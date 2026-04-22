@@ -2,11 +2,8 @@ import express from "express";
 import cors from "cors";
 import bcrypt from "bcrypt"
 import crypto from "crypto"
-import Database from "better-sqlite3";
-import os from "os";
 import blacklist from "the-big-username-blacklist"
-
-const db = new Database("./Lunaris.db");
+import supabase from "./Supabase.js";
 
 const allowedOrigins = [
     "http://localhost:5173",
@@ -17,29 +14,35 @@ const app = express();
 app.use(cors({origin: allowedOrigins}));
 app.use(express.json()); 
 
-app.post("/user/create", (req, res) => {
+app.post("/user/create", async (req, res) => {
     const {username, email, password} = req.body
+    // Hash password and generate uuid and email prefix
     const HashedPass = bcrypt.hashSync(password, 15)
     const uuid = crypto.randomUUID()
     const EmailPrefix = email.split("@")[0]
     // Check if email or username is already in use
-    const checkEmail = db.prepare("SELECT * FROM users WHERE email = ?").get(email)
-    const checkUsername = db.prepare("SELECT * FROM users WHERE username = ?").get(username)
+    const {data: emailData} = await supabase.from("Accounts").select("*").eq("email", email)
+    if(emailData.length > 0) return res.json({status: "error", message: "Email is already in use"})
+    const {data: usernameData} = await supabase.from("Accounts").select("*").eq("username", username)
+    if(usernameData.length > 0) return res.json({status: "error", message: "Username is already in use"})
     // Validation checks
     if(blacklist.validate(EmailPrefix)) return res.json({status: "error", message: "Email is not allowed"})
-    if(checkEmail) return res.json({status: "error", message: "Email already in use"})
-    if(checkUsername) return res.json({status: "error", message: "Username already in use"})
     if(blacklist.validate(username)) return res.json({status: "error", message: "Username is not allowed"})
-
-    db.prepare("INSERT INTO users (uuid, username, email, password) VALUES (?, ?, ?, ?)").run(uuid, username, email, HashedPass)
-    return res.json({status: "success", user: {uuid, username, email}})
+    // Insert new user into database
+    const {SuData, SuError} = await supabase.auth.signUp({email, password})
+    const {AcData, AcError} = await supabase.from("Accounts").insert({uuid, username, email, password: HashedPass})
+    if(SuError || AcError) return res.json({status: "error", message: "An error occurred while creating the account"})
+    return res.json({status: "success", message: "Account created successfully"})
 })
 
 app.post("/user/login", (req, res) => {
     const {email, password} = req.body
-    const user = db.prepare("SELECT * FROM users WHERE email = ?").get(email)
-    if(!user) return res.json({status: "error", message: "Invalid email or password"})
-    const isValidPass = bcrypt.compareSync(password, user.password)
-    if(!isValidPass) return res.json({status: "error", message: "Invalid email or password"})
-    return res.json({status: "success", user: {uuid: user.uuid, username: user.username, email: user.email}})
+    const user = supabase.from("Accounts").select("*").eq("email", email)
+    if(user.data.length === 0) return res.json({status: "error", message: "Invalid email or password"})
+    const validPass = bcrypt.compareSync(password, user.data[0].password)
+    if(!validPass) return res.json({status: "error", message: "Invalid email or password"})
+    const {data: tokenData, error: tokenError} = supabase.auth.signInWithPassword({email, password})
+    if(tokenError) return res.json({status: "error", message: "An error occurred while logging in"})
+    return res.json({status: "success", user: {uuid: user.data[0].uuid, email: user.data[0].email, username: user.data[0].username}, token: tokenData.session.access_token})
+    
 })
