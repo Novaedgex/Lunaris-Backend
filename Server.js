@@ -37,7 +37,7 @@ app.post("/user/create", async (req, res) => {
     const EmailPrefix = email.split("@")[0];
 
     // 1. Validation logic
-    if (blacklist.validate(EmailPrefix)) return res.json({ status: "error", message: "Email is not allowed" });
+    // if (blacklist.validate(EmailPrefix)) return res.json({ status: "error", message: "Email is not allowed" });
     if (blacklist.validate(username)) return res.json({ status: "error", message: "Username is not allowed" });
 
     // 2. Check duplicates (Supabase returns {data, error})
