@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcrypt";
-import blacklist from "the-big-username-blacklist";
 import supabase from "./Supabase.js";
 
 const allowedOrigins = [
@@ -35,10 +34,17 @@ app.post("/user/create", async (req, res) => {
     // Use a slightly lower salt round (10-12) for serverless performance
     const HashedPass = bcrypt.hashSync(password, 10);
     const EmailPrefix = email.split("@")[0];
+    const BlackList = ["admin", "root", "support", "help", "contact", "info", "sysadmin", "administrator", "hostmaster", "webmaster", "postmaster", "abuse", "security", "ssladmin", "ssladministrator", "sslwebmaster"];
 
     // 1. Validation logic
-    // if (blacklist.validate(EmailPrefix)) return res.json({ status: "error", message: "Email is not allowed" });
-    if (blacklist.validate(username)) return res.json({ status: "error", message: "Username is not allowed" });
+    for (const word of BlackList) {
+        if (username.toLowerCase().includes(word)) {
+            return res.json({ status: "error", message: "Username cannot contain reserved words" });
+        }
+        if (EmailPrefix.toLowerCase().includes(word)) {
+            return res.json({ status: "error", message: "Email prefix cannot contain reserved words" });
+        }
+    }
 
     // 2. Check duplicates (Supabase returns {data, error})
     const { data: emailData } = await supabase.from("Accounts").select("*").eq("email", email);
