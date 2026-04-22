@@ -1,7 +1,6 @@
 import express from "express";
 import cors from "cors";
 import bcrypt from "bcrypt"
-import crypto from "crypto"
 import blacklist from "the-big-username-blacklist"
 import supabase from "./Supabase.js";
 
@@ -14,25 +13,40 @@ const app = express();
 app.use(cors({origin: allowedOrigins}));
 app.use(express.json()); 
 
+
+
 app.post("/user/create", async (req, res) => {
-    const {username, email, password} = req.body
-    // Hash password and generate uuid and email prefix
-    const HashedPass = bcrypt.hashSync(password, 15)
-    const uuid = crypto.randomUUID()
-    const EmailPrefix = email.split("@")[0]
-    // Check if email or username is already in use
-    const {data: emailData} = await supabase.from("Accounts").select("*").eq("email", email)
-    if(emailData.length > 0) return res.json({status: "error", message: "Email is already in use"})
-    const {data: usernameData} = await supabase.from("Accounts").select("*").eq("username", username)
-    if(usernameData.length > 0) return res.json({status: "error", message: "Username is already in use"})
-    // Validation checks
-    if(blacklist.validate(EmailPrefix)) return res.json({status: "error", message: "Email is not allowed"})
-    if(blacklist.validate(username)) return res.json({status: "error", message: "Username is not allowed"})
-    // Insert new user into database
-    const {SuData, SuError} = await supabase.auth.signUp({email, password})
-    const {AcData, AcError} = await supabase.from("Accounts").insert({uuid, username, email, password: HashedPass})
-    if(SuError || AcError) return res.json({status: "error", message: "An error occurred while creating the account"})
-    return res.json({status: "success", message: "Account created successfully"})
+  const { username, email, password } = req.body
+
+  const HashedPass = bcrypt.hashSync(password, 15)
+  const EmailPrefix = email.split("@")[0]
+
+  // check duplicates
+  const { data: emailData } = await supabase.from("Accounts").select("*").eq("email", email)
+  if (emailData.length > 0) return res.json({ status: "error", message: "Email is already in use" })
+
+  const { data: usernameData } = await supabase.from("Accounts").select("*").eq("username", username)
+  if (usernameData.length > 0) return res.json({ status: "error", message: "Username is already in use" })
+
+  // validation
+  if (blacklist.validate(EmailPrefix)) return res.json({ status: "error", message: "Email is not allowed" })
+  if (blacklist.validate(username)) return res.json({ status: "error", message: "Username is not allowed" })
+
+  // create auth user
+  const { data: SuData, error: SuError } = await supabase.auth.signUp({ email, password })
+  if (SuError) return res.json({ status: "error", message: SuError.message })
+
+  // insert account row using the uuid from auth
+  const { error: AcError } = await supabase.from("Accounts").insert({
+    username,
+    email,
+    password: HashedPass,
+    UUID: SuData.user.id  // use the auth uuid
+  })
+
+  if (AcError) return res.json({ status: "error", message: AcError.message })
+
+  return res.json({ status: "success", message: "Account created successfully" })
 })
 
 app.post("/user/login", (req, res) => {
