@@ -31,13 +31,10 @@ app.get("/", (req, res) => {
 app.post("/user/create", async (req, res) => {
     const { username, email, password } = req.body;
     const BlackList = ["admin", "root", "support", "help", "contact", "info", "sysadmin", "administrator", "hostmaster", "webmaster", "postmaster", "abuse", "security", "ssladmin", "ssladministrator", "sslwebmaster"];
-    const {data: usernameExists} = await supabase.from("Accounts").select("*").eq("username", username)
-    const {data: emailExists} = await supabase.auth.admin.listUsers().then(({data, error}) => {
-        if (error) return res.json({ status: "error", message: error.message });
-        return data.users.some(user => user.email === email);
-    })
+    const {data: usernameExists} = await supabase.from("Accounts").select("*").eq("username", username).then(({data: users}) => users.some(user => user.email === email))
+    const {data: emailExists} = await supabase.auth.admin.listUsers().then(({data: users}) => users.some(user => user.email === email))
     if (usernameExists) {return res.json({ status: "error", message: "Username already exists" });}
-    if (emailExists) {return res.json({ status: "error", message: "There is a account with this email already!" });}
+    if (emailExists) {return res.json({ status: "error", message: "Email already exists" });}
     if (BlackList.includes(username.toLowerCase())) {return res.json({ status: "error", message: "Username is not allowed" });}
     const {data: userData, error: userError} = await supabase.auth.signUp({email, password})
     if (userError) {return res.json({ status: "error", message: userError.message });}
