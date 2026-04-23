@@ -30,61 +30,34 @@ app.get("/", (req, res) => {
 
 app.post("/user/create", async (req, res) => {
     const { username, email, password } = req.body;
-
-    // Use a slightly lower salt round (10-12) for serverless performance
-    const HashedPass = bcrypt.hashSync(password, 10);
-    const EmailPrefix = email.split("@")[0];
     const BlackList = ["admin", "root", "support", "help", "contact", "info", "sysadmin", "administrator", "hostmaster", "webmaster", "postmaster", "abuse", "security", "ssladmin", "ssladministrator", "sslwebmaster"];
-
-    // 1. Validation logic
-    for (const word of BlackList) {
-        if (username.toLowerCase().includes(word)) {
-            return res.json({ status: "error", message: "Username cannot contain reserved words" });
-        }
-        if (EmailPrefix.toLowerCase().includes(word)) {
-            return res.json({ status: "error", message: "Email prefix cannot contain reserved words" });
-        }
-    }
-
-    // 2. Check duplicates (Supabase returns {data, error})
-    const { data: emailData } = await supabase.from("Accounts").select("*").eq("email", email);
-    if (emailData && emailData.length > 0) return res.json({ status: "error", message: "Email is already in use" });
-
-    const { data: usernameData } = await supabase.from("Accounts").select("*").eq("username", username);
-    if (usernameData && usernameData.length > 0) return res.json({ status: "error", message: "Username is already in use" });
-
-    // 3. Create auth user
-    const { data: SuData, error: SuError } = await supabase.auth.signUp({ email, password });
-    if (SuError) return res.json({ status: "error", message: SuError.message });
-
-    // 4. Insert account row
-    const { error: AcError } = await supabase.from("Accounts").insert({
-        username,
-        email,
-        password: HashedPass,
-        UUID: SuData.user.id 
-    });
-
-    if (AcError) return res.json({ status: "error", message: AcError.message });
-
+    const {data: usernameExists} = await supabase.from("Accounts").select("*").eq("username", username)
+    const {data: emailExists} = await supabase.auth.admin.listUsers().then(({data}) => data.filter(user => user.email === email))
+    if (usernameExists) {return res.json({ status: "error", message: "Username already exists" });}
+    if (emailExists) {return res.json({ status: "error", message: "There is a account with this email already!" });}
+    if (BlackList.includes(username.toLowerCase())) {return res.json({ status: "error", message: "Username is not allowed" });}
+    const {data: userData, error: userError} = await supabase.auth.signUp({email, password})
+    if (userError) {return res.json({ status: "error", message: userError.message });}
+    const {data: insertData, error: insertError} = await supabase.from("Accounts").insert({uuid: userData.user.id, username})
+    if (insertError) {return res.json({ status: "error", message: insertError.message });}
     return res.json({ status: "success", message: "Account created successfully" });
+    
 });
 
 app.post("/user/login", async (req, res) => {
     const {email, password} = req.body
-    const user = await supabase.from("Accounts").select("*").eq("email", email)
-    const validPass = bcrypt.compareSync(password, user.data[0].password)
     const {data: tokenData, error: tokenError} = await supabase.auth.signInWithPassword({email, password})
-    if(!user.data || user.data.length === 0 || !validPass || tokenError) return res.json({status: "error", message: "Invalid email or password"})
-    return res.json({status: "success", user: {uuid: user.data[0].uuid, email: user.data[0].email, username: user.data[0].username}, token: tokenData.session.access_token})
+    if(tokenError) return res.json({status: "error", message: "Invalid token"})
+    const user = await supabase.from("Accounts").select("*").eq("UUID", tokenData.user.id)
+    return res.json({status: "success", user: {uuid: user.data[0].uuid, email: email, username: user.data[0].username}, token: tokenData.session.access_token})
 })
 
 app.post("/user/verify", async (req, res) => {
     const {email, password} = req.body
-    const user = await supabase.from("Accounts").select("*").eq("email", email)
     const {data: tokenData, error: tokenError} = await supabase.auth.signInWithPassword({email, password})
     if(tokenError) return res.json({status: "error", message: "Invalid token"})
-    return res.json({status: "success", user: {uuid: user.data[0].uuid, email: user.data[0].email, username: user.data[0].username}, token: tokenData.session.access_token})
+    const user = await supabase.from("Accounts").select("*").eq("UUID", tokenData.user.id)
+    return res.json({status: "success", user: {uuid: user.data[0].uuid, email: email, username: user.data[0].username}, token: tokenData.session.access_token})
 
     
 })
