@@ -34,7 +34,7 @@ app.post("/user/create", async (req, res) => {
     if (BlackList.includes(username.toLowerCase())) {return res.json({ status: "error", message: "Username is not allowed" });}
     const {data: userData, error: userError} = await supabase.auth.signUp({email, password})
     if (userError) {return res.json({ status: "error", message: userError.message });}
-    const {data: insertData, error: insertError} = await supabase.from("Accounts").insert({uuid: userData.user.id, username})
+    const {data: insertData, error: insertError} = await supabase.from("Accounts").insert({username})
     if (insertError) {return res.json({ status: "error", message: insertError.message });}
     return res.json({ status: "success", message: "Account created successfully" });
     
