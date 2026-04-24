@@ -55,10 +55,10 @@ app.post("/user/verify", async (req, res) => {
 })
 
 app.post("/user/check", async (req, res) => {
-    const {email} = req.body
-    const {data: userData, error: userError} = await supabase.auth.getUserByEmail(email)
+    const {UUID} = req.body
+    const {data: userData, error: userError} = await supabase.auth.admin.getUserById(UUID)
     if (userError) {return res.json({status: "error", message: userError.message})}
-    if (userData.email_confirmed_at) {return res.json({status: "success", message: "Email is verified"})}
+    if (userData.user?.email_confirmed_at) {return res.json({status: "success", message: "Email is verified"})}
     else {return res.json({status: "error", message: "Email is not verified"})}
 })
 
