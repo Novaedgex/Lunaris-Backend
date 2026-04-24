@@ -2,14 +2,12 @@ import express from "express";
 import cors from "cors";
 import bcrypt from "bcrypt";
 import supabase from "./Supabase.js";
-import { Resend } from "resend";
 
 const allowedOrigins = [
     "http://localhost:5173",
     "https://lunarisvps.vercel.app"
 ];
 
-const resend = new Resend(process.env.resendAPIKey);
 const app = express();
 
 // Use a function for CORS to be more resilient with Vercel's edge
