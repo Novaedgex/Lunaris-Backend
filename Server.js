@@ -2,12 +2,14 @@ import express from "express";
 import cors from "cors";
 import bcrypt from "bcrypt";
 import supabase from "./Supabase.js";
+import { Resend } from "resend";
 
 const allowedOrigins = [
     "http://localhost:5173",
     "https://lunarisvps.vercel.app"
 ];
 
+const resend = new Resend(process.env.resendAPIKey);
 const app = express();
 
 // Use a function for CORS to be more resilient with Vercel's edge
@@ -49,13 +51,10 @@ app.post("/user/login", async (req, res) => {
 })
 
 app.post("/user/verify", async (req, res) => {
-    const {email, password} = req.body
-    const {data: tokenData, error: tokenError} = await supabase.auth.signInWithPassword({email, password})
-    if(tokenError) return res.json({status: "error", message: "Invalid token"})
-    const user = await supabase.from("Accounts").select("*").eq("UUID", tokenData.user.id)
-    return res.json({status: "success", user: {uuid: user.data[0].uuid, email: email, username: user.data[0].username}, token: tokenData.session.access_token})
-
-    
+    const {email, password, token} = req.body
+    const {data: VerifyOtpData, error: VerifyOtpError} = await supabase.auth.verifyOtp({token_hash: token, type: "signup"})
+    if(VerifyOtpError) return res.json({status: "error", message: "Invalid token"})
+    return res.json({status: "success", message: "Account verified successfully"})
 })
 
 export default app;
