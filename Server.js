@@ -54,4 +54,11 @@ app.post("/user/verify", async (req, res) => {
     return res.json({status: "success", message: "Account verified successfully"})
 })
 
+app.post("/user/check", async (req, res) => {
+    const {email} = req.body
+    const {data: userData, error: userError} = await supabase.auth.getUserByEmail(email)
+    if (userData.email_confirmed_at) {return res.json({status: "success", message: "Email is verified"})}
+    else {return res.json({status: "error", message: "Email is not verified"})}
+})
+
 export default app;
