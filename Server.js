@@ -1,6 +1,5 @@
 import express from "express";
 import cors from "cors";
-import bcrypt from "bcrypt";
 import supabase from "./Supabase.js";
 
 const allowedOrigins = [
@@ -49,8 +48,8 @@ app.post("/user/login", async (req, res) => {
 })
 
 app.post("/user/verify", async (req, res) => {
-    const {email, password, token} = req.body
-    const {data: VerifyOtpData, error: VerifyOtpError} = await supabase.auth.verifyOtp({token_hash: token, type: "signup"})
+    const {email , token} = req.body
+    const {data: VerifyOtpData, error: VerifyOtpError} = await supabase.auth.verifyOtp({email : email, token : token, type : "signup"})
     if(VerifyOtpError) return res.json({status: "error", message: "Invalid token"})
     return res.json({status: "success", message: "Account verified successfully"})
 })
