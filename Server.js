@@ -43,7 +43,7 @@ app.post("/user/login", async (req, res) => {
     const {data: tokenData, error: tokenError} = await supabase.auth.signInWithPassword({email, password})
     if(tokenError) return res.json({status: "error", message: tokenError.message})
     const user = await supabase.from("Accounts").select("*").eq("UUID", tokenData.user.id)
-    return res.json({status: "success", user: {uuid: tokenData.user.id, email: email, username: user.data[0].username}, token: tokenData.session.access_token})
+    return res.json({status: "success", user: {uuid: tokenData.user.id, email: email, username: user.data[0].username, type: user.data[0].type}, token: tokenData.session.access_token})
 })
 
 app.post("/user/verify", async (req, res) => {
