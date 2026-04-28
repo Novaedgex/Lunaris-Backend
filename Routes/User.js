@@ -1,5 +1,5 @@
 import express from 'express';
-import supabase from '../Supabase.js';
+import supabase from '../Supabase';
 const router = express.Router();
 
 router.post("/create", async (req, res) => {
