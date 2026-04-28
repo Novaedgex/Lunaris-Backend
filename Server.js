@@ -1,6 +1,6 @@
 import express from "express";
 import cors from "cors";
-import supabase from "./Supabase.js";
+import supabase from "./lib/Supabase.js";
 import userRoutes from "./Routes/User.js";
 const allowedOrigins = [
     "http://localhost:5173",
