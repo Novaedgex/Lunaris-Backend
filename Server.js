@@ -3,7 +3,7 @@ import cors from "cors";
 import userRoutes from "./Routes/User.js";
 import itemRouter from "./Routes/Items.js"
 
-const port = 3000;
+// const port = 3000;
 const allowedOrigins = [
     "http://localhost:5173",
     "https://lunarisvps.vercel.app"
